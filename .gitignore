@@ -9,3 +9,13 @@ downloads/
 
 # Игнорировать системные файлы
 .DS_Store
+
+.env
+
+/node_modules
+
+package-lock.json
+
+.xml
+
+.idea/*

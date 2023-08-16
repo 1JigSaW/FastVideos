@@ -1,17 +1,27 @@
 import os
 import openai
 from google_images_search import GoogleImagesSearch
+import subprocess
 import json
-
-from MidjourneyAPI import MidjourneyAPI
 
 VAR = 'pens'
 
-gis = GoogleImagesSearch('AIzaSyAEuu9mWdYZxrqnxTwVUh-vgI9u175lvro', 'a685d0b2eb4ac47ff')
+GCP_API_KEY = os.getenv('GCP_API_KEY')
+GCP_CX_KEY = os.getenv('GCP_CX_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
-openai.api_key = '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'
+gis = GoogleImagesSearch(GCP_API_KEY, GCP_CX_KEY)
 
-api = MidjourneyAPI("YOUR_API_KEY_HERE")
+openai.api_key = OPENAI_API_KEY
+
+
+def run_js_script(script_path, argument):
+    try:
+        output = subprocess.check_output(["node", script_path, argument], stderr=subprocess.STDOUT)
+        print(f"Output from JS script: {output.decode('utf-8')}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error occurred: {e.output.decode('utf-8')}")
+
 
 def clean_name(name):
     invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
@@ -44,6 +54,9 @@ def search(query):
         image.download(directory_name)
 
 
+argument = "Hello, JavaScript!"
+run_js_script("mj.js", argument)
+
 # response = openai.ChatCompletion.create(
 #     model="gpt-4",
 #     messages=[
@@ -73,5 +86,3 @@ def search(query):
 #
 # for name, price in list_items.items():
 #     search(name)
-
-
