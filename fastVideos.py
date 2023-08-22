@@ -5,11 +5,17 @@ import subprocess
 import json
 import datetime
 from dotenv import load_dotenv
-from moviepy.editor import ImageClip, TextClip, CompositeVideoClip, concatenate_videoclips, AudioFileClip
+from moviepy.editor import *
 from moviepy.video.VideoClip import ColorClip
 from moviepy.video.tools.segmenting import findObjects
 from PIL import Image, ImageOps
 import numpy as np
+from textwrap import wrap
+
+
+def wrap_text(text, max_width):
+    return '\n'.join(wrap(text, max_width))
+
 
 load_dotenv()
 
@@ -49,6 +55,7 @@ def resize_and_center(image_path, width, height):
     bg.paste(img, offset)
 
     return bg
+
 
 # def run_js_script(script_path, argument1, argument2):
 #     try:
@@ -122,13 +129,15 @@ def resize_and_center(image_path, width, height):
 #
 # list_items = output
 #
-# # list_items = {
-# #     "La Modernista Diamonds by Caran d’Ache": "$265,000",
-# #     "Mystery Masterpiece by Mont Blanc and Van Cleef & Arpels": "$730,000",
-# #     "Heaven Gold Pen by Anita Tan": "$995,000",
-# #     "Boheme Royal by Mont Blanc": "$1,500,000",
-# #     "Fulgor Nocturnus by Tibaldi": "$8,000,000"
-# # }
+list_items = {
+    "La Modernista Diamonds by Caran d’Ache": "$265,000",
+    "Mystery Masterpiece by Mont Blanc and Van Cleef & Arpels": "$730,000",
+    "Heaven Gold Pen by Anita Tan": "$995,000",
+    "Boheme Royal by Mont Blanc": "$1,500,000",
+    "Fulgor Nocturnus by Tibaldi": "$8,000,000"
+}
+
+
 #
 # mj_query = f'Create a beautiful background for a video titled: Write the 5 most expensive {VAR} in the world'
 # run_js_script("mj.js", mj_query, VAR)
@@ -137,15 +146,14 @@ def resize_and_center(image_path, width, height):
 #     search(name)
 
 
-import os
 
 background_folder = "background"
 downloads_folder = "downloads"
 
-# Фильтруйте изображения в папке background по ключевому слову
+
 background_folders = [folder for folder in os.listdir(background_folder) if folder.startswith(VAR)]
 
-# Если найдена хотя бы одна папка, используйте первое изображение в ней
+
 if background_folders:
     images = os.listdir(os.path.join(background_folder, background_folders[0]))
     if images:
@@ -156,10 +164,10 @@ if background_folders:
 else:
     print(f"Не найдено папок с ключевым словом '{VAR}' в папке background.")
 
-# Получите список всех папок в папке downloads
+
 folders = [folder for folder in os.listdir(downloads_folder) if folder.startswith(VAR)]
 
-# Выберите первое изображение из каждой папки с ключом "pens"
+
 image_paths = []
 for folder in folders:
     images = os.listdir(os.path.join(downloads_folder, folder))
@@ -169,42 +177,44 @@ for folder in folders:
 
 print("Пути к первым изображениям в каждой папке:", image_paths[0])
 
-
 resolution = (1080, 1920)
 
-# Вступление
-intro_text1 = TextClip("Топ 5", fontsize=60, color='black').set_duration(3).fadein(1).fadeout(1)
-intro_text2 = TextClip("самых дорогих ручек в мире", fontsize=60, color='black').set_duration(3).fadein(1).fadeout(1)
+intro_text1 = TextClip("Top 5 most expensive", fontsize=60, color='black').set_duration(3).fadein(1).fadeout(1)
+intro_text2 = TextClip(f"{VAR} in the world", fontsize=60, color='black').set_duration(3).fadein(
+    1).fadeout(1)
 
 intro_text_size1 = intro_text1.size
 intro_text_size2 = intro_text2.size
 
-intro_text_bg = ColorClip(size=(resolution[0], intro_text_size1[1] + intro_text_size2[1] + 50), color=[255, 255, 255]).set_opacity(0.8).set_position(('center', 'center')).set_duration(3)
-intro_image = ImageClip(np.array(resize_and_center(background_image_path, *resolution)), ismask=False).set_duration(3)
+intro_text_bg = ColorClip(size=(resolution[0], intro_text_size1[1] + intro_text_size2[1] + 50),
+                          color=[255, 255, 255]).set_opacity(0.3).set_position(('center', 'center')).set_duration(3)
+intro_image = (ImageClip(np.array(resize_and_center(background_image_path, *resolution)), ismask=False)
+               .set_duration(3)
+               .fadein(1)
+               .fadeout(1))
 
-intro = CompositeVideoClip([intro_image, intro_text_bg, intro_text1.set_position(('center', (resolution[1] - intro_text_size1[1] - intro_text_size2[1]) // 2)), intro_text2.set_position(('center', (resolution[1] + intro_text_size1[1] - intro_text_size2[1]) // 2))])
+intro = CompositeVideoClip([intro_image, intro_text_bg, intro_text1.set_position(
+    ('center', (resolution[1] - intro_text_size1[1] - intro_text_size2[1]) // 2)), intro_text2.set_position(
+    ('center', (resolution[1] + intro_text_size1[1] - intro_text_size2[1]) // 2))])
 
-# Загрузите изображения и установите продолжительность
-clips = [ImageClip(np.array(resize_and_center(image_path, *resolution)), ismask=False).set_duration(3).fadein(1).fadeout(1) for image_path in image_paths]
+clips = [
+    ImageClip(np.array(resize_and_center(image_path, *resolution)), ismask=False).set_duration(3).fadein(1).fadeout(1)
+    for image_path in image_paths]
 
-# Создайте текстовые надписи и цены
-texts = [TextClip(f"{5 - i} место: Ручка {5 - i}\n\n${1000 * (5 - i)}", fontsize=50, color='black').set_pos('center').set_duration(3) for i in range(5)]
-text_bgs = [ColorClip(size=(resolution[0], 200), color=[255, 255, 255]).set_opacity(0.8).set_position(('center', 'center')).set_duration(3) for i in range(5)]
+max_width = 25
+texts = [TextClip(f"{wrap_text(f'{5 - i} place: {name}', max_width)}\n\n{price}", fontsize=50, color='black').set_pos(
+    'center').set_duration(3) for i, (name, price) in enumerate(list_items.items())]
+text_bgs = [ColorClip(size=(resolution[0], 250), color=[255, 255, 255]).set_opacity(0.3).set_position(
+    ('center', 'center')).set_duration(3) for i in range(5)]
 
-# Объедините изображения и текст
 videos = [CompositeVideoClip([clips[i], text_bgs[i], texts[i]]) for i in range(5)]
 
-# Объедините вступление и видео с ручками
 final_video = concatenate_videoclips([intro] + videos)
 
-# Загрузите аудио
-audio = AudioFileClip("654728__sergequadrado__comfort.wav")
+audio = AudioFileClip("music.mp3")
 
-# Обрежьте аудио, чтобы оно соответствовало общей продолжительности видео
 audio = audio.subclip(0, final_video.duration)
 
-# Установите аудио для видео
 final_video = final_video.set_audio(audio)
 
-# Экспортируйте видео
 final_video.write_videofile("final_video.mp4", fps=24)
