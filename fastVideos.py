@@ -10,6 +10,7 @@ from moviepy.video.VideoClip import ColorClip
 from PIL import Image, ImageOps
 import numpy as np
 from textwrap import wrap
+import shutil
 
 
 def wrap_text(text, max_width):
@@ -66,7 +67,20 @@ def clean_name(name):
     return name
 
 
+def delete_video_folders(directories):
+    for directory in directories:
+        if os.path.exists(directory):
+            for folder_name in os.listdir(directory):
+                folder_path = os.path.join(directory, folder_name)
+
+                if not folder_name.startswith(f'{VAR}_'):
+                    if os.path.isdir(folder_path):
+                        shutil.rmtree(folder_path)
+
+
 def search(query):
+    delete_video_folders(['downloads', 'background'])
+
     _search_params = {
         'q': query,
         'num': 5,
@@ -110,6 +124,25 @@ def make_request():
     return response
 
 
+def make_request_hashtag():
+    response = openai.ChatCompletion.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are ChatGPT, a large language model."},
+            {"role": "user", "content": f""" Generate 10 popular video hashtags titled "Top 5 most expensive {VAR} in 
+            the world" and output them as json like this {{
+                "1": "#money",
+                "2": "#people",
+                "3": "#computers",
+                "4": "#smile",
+                "5": "#health"
+            }}
+            """},
+        ]
+    )
+    return response
+
+
 def get_data_and_download_images():
     output = None
     for i in range(3):
@@ -123,11 +156,33 @@ def get_data_and_download_images():
     else:
         print("Failed to get a valid response after 3 attempts.")
 
+    output_hashtag = None
+    for i in range(3):
+        try:
+            response = make_request_hashtag()
+            output_hashtag = json.loads(response['choices'][0]['message']['content'])
+            print(output)
+            break
+        except json.JSONDecodeError:
+            print("JSON Decode Error, retrying...")
+    else:
+        print("Failed to get a valid response after 3 attempts.")
 
     list_items = output
+    hashtags = output_hashtag
+
+    hashtags_list = [hashtags[key] for key in hashtags]
+
+    hashtags_str = ', '.join(hashtags_list)
+
+    hashtags_str = f"TOP 5 MOST EXPENSIVE {VAR.upper()} IN THE WORLD " + hashtags_str
+
+    with open('hashtags.txt', 'w') as f:
+        f.write(hashtags_str)
 
     def price_to_int(price_str):
-        return int(price_str.replace("$", "").replace(",", ""))
+        price_str = price_str.replace("$", "").split(".")[0]
+        return int(price_str.replace(",", ""))
 
     list_items = dict(sorted(list_items.items(), key=lambda item: price_to_int(item[1])))
 
@@ -241,12 +296,17 @@ def prepare_video(data_list):
     final_video.write_videofile(f"final_video_{VAR}.mp4", fps=60, bitrate="5000k")
 
 
-VAR = 'beverages'
+VAR = 'books'
 
 # data_list = get_data_and_download_images()
 # with open('data_list.json', 'w') as file:
 #     json.dump(data_list, file)
 
+
 with open('data_list.json', 'r') as file:
     data_list = json.load(file)
 prepare_video(data_list)
+
+with open("hashtags.txt", "r") as file:
+    content = file.read()
+    print(content)
