@@ -1,4 +1,24 @@
 import os
+import pickle
+from tkinter import Tk, Label, Button, Listbox, Canvas, Scrollbar, Frame, filedialog
+from urllib.request import urlopen
+
+from bs4 import BeautifulSoup
+from get_chrome_driver import GetChromeDriver
+import time
+import random
+import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException
+from webdriver_manager.chrome import ChromeDriverManager as CM
+from chromedriver_py import binary_path
+
 import openai
 from google_images_search import GoogleImagesSearch
 import subprocess
@@ -7,7 +27,7 @@ import datetime
 from dotenv import load_dotenv
 from moviepy.editor import *
 from moviepy.video.VideoClip import ColorClip
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageTk
 import numpy as np
 from textwrap import wrap
 import shutil
@@ -296,17 +316,144 @@ def prepare_video(data_list):
     final_video.write_videofile(f"final_video_{VAR}.mp4", fps=60, bitrate="5000k")
 
 
-VAR = 'books'
+def select_image(folder):
+    root = Tk()
+    root.title('Выберите изображение')
+
+    images = [file for file in os.listdir(folder) if file.lower().endswith(('png', 'jpg', 'jpeg'))]
+    img_objects = []
+    img_labels = []
+
+    def confirm_selection(img_name):
+        for img in images:
+            if img != img_name:
+                os.remove(os.path.join(folder, img))
+        root.destroy()
+
+    def load_from_computer():
+        file_path = filedialog.askopenfilename(filetypes=[('Image files', '.png .jpg .jpeg')])
+        if file_path:
+            # Копируем файл в целевую папку
+            shutil.copy(file_path, folder)
+            new_file_name = os.path.basename(file_path)
+
+            # Удаляем все другие файлы
+            for img in images:
+                os.remove(os.path.join(folder, img))
+
+            root.destroy()
+
+    def show_images():
+        for i, img in enumerate(images):
+            image_path = os.path.join(folder, img)
+            img_obj = Image.open(image_path)
+
+            # Уменьшение размера с сохранением пропорций
+            base_width, base_height = img_obj.size
+            new_width = int(base_width * 0.3)
+            new_height = int(base_height * 0.3)
+            img_obj = img_obj.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+            img_tk = ImageTk.PhotoImage(img_obj)
+
+            panel = Label(root, image=img_tk)
+            panel.image = img_tk
+            panel.grid(column=i, row=0)
+            panel.bind("<Button-1>", lambda e, img=img: confirm_selection(img))
+
+            img_objects.append(img_obj)
+            img_labels.append(panel)
+
+    show_images()
+
+    load_button = Button(root, text="Загрузить изображение", command=load_from_computer)
+    load_button.grid(column=0, row=1)
+
+    root.mainloop()
+
+
+def downloadVideo(link, id):
+    options = Options()
+    options.add_argument("start-maximized")
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    driver = webdriver.Chrome(options=options)
+    # Change the tiktok link
+    driver.get("https://www.tiktok.com/@papayaho.cat")
+    print(f"Downloading video {id} from: {link}")
+    cookies = {
+        # Please get this data from the console network activity tool
+        # This is explained in the video :)
+    }
+
+    headers = {
+        # Please get this data from the console network activity tool
+        # This is explained in the video :)
+    }
+
+    params = {
+        'url': 'dl',
+    }
+
+    data = {
+        'id': link,
+        'locale': 'en',
+        'tt': '',
+
+    }
+
+    print("STEP 4: Getting the download link")
+    print("If this step fails, PLEASE read the steps above")
+    response = requests.post('https://ssstik.io/abc', params=params, cookies=cookies, headers=headers, data=data)
+    downloadSoup = BeautifulSoup(response.text, "html.parser")
+
+    downloadLink = downloadSoup.a["href"]
+    videoTitle = downloadSoup.p.getText().strip()
+
+    print("STEP 5: Saving the video :)")
+    mp4File = urlopen(downloadLink)
+    # Feel free to change the download directory
+    with open(f"videos/{id}-{videoTitle}.mp4", "wb") as output:
+        while True:
+            data = mp4File.read(4096)
+            if data:
+                output.write(data)
+            else:
+                break
+
+
+VAR = 'houses'
 
 # data_list = get_data_and_download_images()
 # with open('data_list.json', 'w') as file:
 #     json.dump(data_list, file)
+#
+# directories = ["background", "downloads"]
+#
+# for directory in directories:
+#     for subfolder in os.listdir(directory):
+#         full_path = os.path.join(directory, subfolder)
+#         if os.path.isdir(full_path):
+#             select_image(full_path)
+#
+# with open('data_list.json', 'r') as file:
+#     data_list = json.load(file)
+# prepare_video(data_list)
+#
+# with open("hashtags.txt", "r") as file:
+#     content = file.read()
+#     print(content)
 
 
-with open('data_list.json', 'r') as file:
-    data_list = json.load(file)
-prepare_video(data_list)
+from tiktok_uploader.upload import upload_videos
+from tiktok_uploader.auth import AuthBackend
 
-with open("hashtags.txt", "r") as file:
-    content = file.read()
-    print(content)
+videos = [
+    {
+        'video': 'final_video_yachts.mp4',
+        'description': content
+    },
+]
+
+auth = AuthBackend(cookies='cookies.txt')
+failed_videos = upload_videos(videos=videos, auth=auth)
