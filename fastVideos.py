@@ -8,6 +8,7 @@ from get_chrome_driver import GetChromeDriver
 import time
 import random
 import requests
+from instagram_private_api_extensions import media
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -31,6 +32,9 @@ from PIL import Image, ImageOps, ImageTk
 import numpy as np
 from textwrap import wrap
 import shutil
+
+from tiktok_uploader.upload import upload_videos
+from tiktok_uploader.auth import AuthBackend
 
 
 def wrap_text(text, max_width):
@@ -252,10 +256,9 @@ def prepare_video(data_list):
     resolution = (1080, 1920)
 
     intro_text1 = TextClip("Top 5 most expensive", fontsize=60, color='white', font='Ubuntu-Mono-Bold').set_duration(
-        3).fadein(0.5).fadeout(0.5)
+        3).fadeout(0.5)
     intro_text2 = TextClip(f"{VAR} in the world", fontsize=60, color='white', font='Ubuntu-Mono-Bold').set_duration(
-        3).fadein(
-        0.5).fadeout(0.5)
+        3).fadeout(0.5)
 
     intro_text_size1 = intro_text1.size
     intro_text_size2 = intro_text2.size
@@ -264,7 +267,6 @@ def prepare_video(data_list):
                               color=[0, 0, 0]).set_opacity(0.5).set_position(('center', 'center')).set_duration(3)
     intro_image = (ImageClip(np.array(resize_and_center(background_image_path, *resolution)), ismask=False)
                    .set_duration(3)
-                   .fadein(0.5)
                    .fadeout(0.5))
 
     intro = CompositeVideoClip([intro_image, intro_text_bg, intro_text1.set_position(
@@ -422,7 +424,19 @@ def downloadVideo(link, id):
                 break
 
 
-VAR = 'houses'
+def upload_tiktok(title, description):
+    videos = [
+        {
+            'video': title,
+            'description': description
+        },
+    ]
+
+    auth = AuthBackend(cookies='cookies.txt')
+    failed_videos = upload_videos(videos=videos, auth=auth)
+
+
+VAR = 'dog breeds'
 
 # data_list = get_data_and_download_images()
 # with open('data_list.json', 'w') as file:
@@ -445,15 +459,6 @@ VAR = 'houses'
 #     print(content)
 
 
-from tiktok_uploader.upload import upload_videos
-from tiktok_uploader.auth import AuthBackend
+# upload_tiktok(f'final_video_{VAR}.mp4', content)
 
-videos = [
-    {
-        'video': 'final_video_yachts.mp4',
-        'description': content
-    },
-]
 
-auth = AuthBackend(cookies='cookies.txt')
-failed_videos = upload_videos(videos=videos, auth=auth)
