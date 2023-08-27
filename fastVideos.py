@@ -1,24 +1,5 @@
 import os
-import pickle
 from tkinter import Tk, Label, Button, Listbox, Canvas, Scrollbar, Frame, filedialog
-from urllib.request import urlopen
-
-from bs4 import BeautifulSoup
-from get_chrome_driver import GetChromeDriver
-import time
-import random
-import requests
-from instagram_private_api_extensions import media
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException
-from webdriver_manager.chrome import ChromeDriverManager as CM
-from chromedriver_py import binary_path
 
 import openai
 from google_images_search import GoogleImagesSearch
@@ -32,9 +13,13 @@ from PIL import Image, ImageOps, ImageTk
 import numpy as np
 from textwrap import wrap
 import shutil
+from moviepy.video.fx import resize
 
 from tiktok_uploader.upload import upload_videos
 from tiktok_uploader.auth import AuthBackend
+from instagrapi import Client
+from simple_youtube_api.Channel import Channel
+from simple_youtube_api.LocalVideo import LocalVideo
 
 
 def wrap_text(text, max_width):
@@ -374,56 +359,6 @@ def select_image(folder):
     root.mainloop()
 
 
-def downloadVideo(link, id):
-    options = Options()
-    options.add_argument("start-maximized")
-    options.add_argument("--disable-blink-features=AutomationControlled")
-    options.add_experimental_option("excludeSwitches", ["enable-automation"])
-    driver = webdriver.Chrome(options=options)
-    # Change the tiktok link
-    driver.get("https://www.tiktok.com/@papayaho.cat")
-    print(f"Downloading video {id} from: {link}")
-    cookies = {
-        # Please get this data from the console network activity tool
-        # This is explained in the video :)
-    }
-
-    headers = {
-        # Please get this data from the console network activity tool
-        # This is explained in the video :)
-    }
-
-    params = {
-        'url': 'dl',
-    }
-
-    data = {
-        'id': link,
-        'locale': 'en',
-        'tt': '',
-
-    }
-
-    print("STEP 4: Getting the download link")
-    print("If this step fails, PLEASE read the steps above")
-    response = requests.post('https://ssstik.io/abc', params=params, cookies=cookies, headers=headers, data=data)
-    downloadSoup = BeautifulSoup(response.text, "html.parser")
-
-    downloadLink = downloadSoup.a["href"]
-    videoTitle = downloadSoup.p.getText().strip()
-
-    print("STEP 5: Saving the video :)")
-    mp4File = urlopen(downloadLink)
-    # Feel free to change the download directory
-    with open(f"videos/{id}-{videoTitle}.mp4", "wb") as output:
-        while True:
-            data = mp4File.read(4096)
-            if data:
-                output.write(data)
-            else:
-                break
-
-
 def upload_tiktok(title, description):
     videos = [
         {
@@ -436,7 +371,53 @@ def upload_tiktok(title, description):
     failed_videos = upload_videos(videos=videos, auth=auth)
 
 
-VAR = 'dog breeds'
+def upload_instagram(title, description):
+    cl = Client()
+
+    media = cl.video_upload(
+        title,
+        description
+    )
+
+
+def upload_youtube(title, description):
+    channel = Channel()
+    channel.login("client_secrets.json", "credentials.storage")
+
+    # setting up the video that is going to be uploaded
+    video = LocalVideo(file_path=title)
+
+    split_string = description.split('#')
+
+    title_name = split_string[0].strip()
+
+    hashtags = ['#' + tag.strip() for tag in split_string[1:]]
+
+    hashtags = [tag.strip() for hashtag in hashtags for tag in hashtag.split(',')]
+
+    video.set_title(title_name)
+    # video.set_description("This is a description")
+    video.set_tags(hashtags)
+    video.set_category("hobby")
+    video.set_default_language("en-US")
+    video.self_declared_made_for_kids(True)
+
+    # setting status
+    video.set_embeddable(False)
+    video.set_license("creativeCommon")
+    video.set_privacy_status("public")
+    video.set_public_stats_viewable(True)
+
+    # uploading video and printing the results
+    video = channel.upload_video(video)
+    print(video.id)
+    print(video)
+
+    # liking video
+    video.like()
+
+
+VAR = 'computers'
 
 # data_list = get_data_and_download_images()
 # with open('data_list.json', 'w') as file:
@@ -449,16 +430,15 @@ VAR = 'dog breeds'
 #         full_path = os.path.join(directory, subfolder)
 #         if os.path.isdir(full_path):
 #             select_image(full_path)
-#
-# with open('data_list.json', 'r') as file:
-#     data_list = json.load(file)
-# prepare_video(data_list)
-#
-# with open("hashtags.txt", "r") as file:
-#     content = file.read()
-#     print(content)
 
+with open('data_list.json', 'r') as file:
+    data_list = json.load(file)
+prepare_video(data_list)
+
+with open("hashtags.txt", "r") as file:
+    content = file.read()
+    print(content)
 
 # upload_tiktok(f'final_video_{VAR}.mp4', content)
-
-
+# upload_instagram(f'final_video_{VAR}.mp4', content)
+# upload_youtube(f'final_video_{VAR}.mp4', content)
