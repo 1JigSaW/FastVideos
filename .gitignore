@@ -23,3 +23,13 @@ package-lock.json
 downloads/*
 
 background/
+
+video/
+
+client_secret.json
+
+client_secrets.json
+
+cookies.txt
+
+credentials.storage
