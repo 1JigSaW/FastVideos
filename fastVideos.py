@@ -1,4 +1,5 @@
 import os
+import time
 from tkinter import Tk, Label, Button, Listbox, Canvas, Scrollbar, Frame, filedialog
 
 import openai
@@ -182,7 +183,7 @@ def get_data_and_download_images():
 
     hashtags_list = [hashtags[key] for key in hashtags]
 
-    hashtags_str = ', '.join(hashtags_list)
+    hashtags_str = ' '.join(hashtags_list)
 
     hashtags_str = f"TOP 5 MOST EXPENSIVE {VAR.upper()} IN THE WORLD " + hashtags_str
 
@@ -300,7 +301,31 @@ def prepare_video(data_list):
 
     final_video = final_video.set_audio(audio)
 
-    final_video.write_videofile(f"final_video_{VAR}.mp4", fps=60, bitrate="5000k")
+    final_video.write_videofile(
+        f"temp_final_video_{VAR}.mp4",
+        fps=60,
+        bitrate="5000k",
+        audio=None
+    )
+
+    video_duration = final_video.duration
+
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-i", f"temp_final_video_{VAR}.mp4",
+            "-i", "music.mp3",
+            "-t", str(video_duration),
+            "-c:v", "copy",
+            "-c:a", "libmp3lame",
+            "-b:a", "127k",
+            "-ar", "44100",
+            "-ac", "2",
+            f"video/final_video_{VAR}.mp4"
+        ]
+    )
+
+    os.remove(f"temp_final_video_{VAR}.mp4")
 
 
 def select_image(folder):
@@ -320,11 +345,9 @@ def select_image(folder):
     def load_from_computer():
         file_path = filedialog.askopenfilename(filetypes=[('Image files', '.png .jpg .jpeg')])
         if file_path:
-            # Копируем файл в целевую папку
             shutil.copy(file_path, folder)
             new_file_name = os.path.basename(file_path)
 
-            # Удаляем все другие файлы
             for img in images:
                 os.remove(os.path.join(folder, img))
 
@@ -335,7 +358,6 @@ def select_image(folder):
             image_path = os.path.join(folder, img)
             img_obj = Image.open(image_path)
 
-            # Уменьшение размера с сохранением пропорций
             base_width, base_height = img_obj.size
             new_width = int(base_width * 0.3)
             new_height = int(base_height * 0.3)
@@ -371,13 +393,30 @@ def upload_tiktok(title, description):
     failed_videos = upload_videos(videos=videos, auth=auth)
 
 
+def generate_thumbnail(video_path, thumbnail_filename):
+    from moviepy.editor import VideoFileClip
+    from PIL import Image
+    import numpy as np
+
+    current_folder = os.getcwd()
+    thumbnail_path = os.path.join(current_folder, thumbnail_filename)
+
+    clip = VideoFileClip(video_path)
+    frame = clip.get_frame(1)
+    image = Image.fromarray(np.uint8(frame))
+    image.save(thumbnail_path)
+
+
 def upload_instagram(title, description):
     cl = Client()
-
-    media = cl.video_upload(
+    cl.login(os.getenv('INSTAGRAM_USERNAME'), os.getenv('INSTAGRAM_PASSWORD'))
+    generate_thumbnail(title, "thumbnail.jpg")
+    media = cl.clip_upload(
         title,
-        description
+        description,
+        thumbnail="thumbnail.jpg",
     )
+    os.remove("thumbnail.jpg")
 
 
 def upload_youtube(title, description):
@@ -398,9 +437,9 @@ def upload_youtube(title, description):
     video.set_title(title_name)
     # video.set_description("This is a description")
     video.set_tags(hashtags)
-    video.set_category("hobby")
+    video.set_category("education")
     video.set_default_language("en-US")
-    video.self_declared_made_for_kids(True)
+    video.set_made_for_kids(True)
 
     # setting status
     video.set_embeddable(False)
@@ -430,15 +469,17 @@ VAR = 'computers'
 #         full_path = os.path.join(directory, subfolder)
 #         if os.path.isdir(full_path):
 #             select_image(full_path)
+#
+# with open('data_list.json', 'r') as file:
+#     data_list = json.load(file)
+# prepare_video(data_list)
+#
 
-with open('data_list.json', 'r') as file:
-    data_list = json.load(file)
-prepare_video(data_list)
+# time.sleep(5)
+# with open("hashtags.txt", "r") as file:
+#     content = file.read()
+#     print(content)
 
-with open("hashtags.txt", "r") as file:
-    content = file.read()
-    print(content)
-
-# upload_tiktok(f'final_video_{VAR}.mp4', content)
-# upload_instagram(f'final_video_{VAR}.mp4', content)
-# upload_youtube(f'final_video_{VAR}.mp4', content)
+# upload_tiktok(f'video/final_video_{VAR}.mp4', content)
+# upload_instagram(f'video/final_video_{VAR}.mp4', content)
+# upload_youtube(f'video/final_video_{VAR}.mp4', content)
