@@ -435,7 +435,7 @@ def upload_youtube(title, description):
     hashtags = [tag.strip() for hashtag in hashtags for tag in hashtag.split(',')]
 
     video.set_title(title_name)
-    # video.set_description("This is a description")
+    #video.set_description("This is a description")
     video.set_tags(hashtags)
     video.set_category("education")
     video.set_default_language("en-US")
