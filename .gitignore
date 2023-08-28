@@ -1,0 +1,35 @@
+# Игнорировать виртуальное окружение
+venv/
+
+# Игнорировать папку с загруженными данными
+downloads/
+
+# Игнорировать все .pyc файлы
+*.pyc
+
+# Игнорировать системные файлы
+.DS_Store
+
+.env
+
+/node_modules
+
+package-lock.json
+
+.xml
+
+.idea
+
+downloads/*
+
+background/
+
+video/
+
+client_secret.json
+
+client_secrets.json
+
+cookies.txt
+
+credentials.storage
