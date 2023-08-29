@@ -1,8 +1,11 @@
+import argparse
 import os
 import time
-from tkinter import Tk, Label, Button, Listbox, Canvas, Scrollbar, Frame, filedialog
+from tkinter import Tk, Label, Button, filedialog
 
 import openai
+import tk
+import vlc
 from google_images_search import GoogleImagesSearch
 import subprocess
 import json
@@ -14,7 +17,9 @@ from PIL import Image, ImageOps, ImageTk
 import numpy as np
 from textwrap import wrap
 import shutil
-from moviepy.video.fx import resize
+import tkinter as tk
+from tkinter import messagebox
+from vlc import Instance
 
 from tiktok_uploader.upload import upload_videos
 from tiktok_uploader.auth import AuthBackend
@@ -55,7 +60,7 @@ def resize_and_center(image_path, width, height):
 
     img = img.resize((new_img_w, new_img_h), Image.Resampling.LANCZOS)
 
-    bg = Image.new('RGB', (width, height), (0, 0, 0))  # Задаем черный цвет фона
+    bg = Image.new('RGB', (width, height), (0, 0, 0))
     offset = ((width - new_img_w) // 2, (height - new_img_h) // 2)
     bg.paste(img, offset)
 
@@ -328,6 +333,32 @@ def prepare_video(data_list):
     os.remove(f"temp_final_video_{VAR}.mp4")
 
 
+def show_video_and_ask(video_path):
+    # Запускаем видео с помощью системного проигрывателя
+    try:
+        # Для Windows
+        # subprocess.Popen(["start", video_path], shell=True)
+
+        # Для macOS
+        # subprocess.Popen(["open", video_path])
+
+        # Для Linux
+        subprocess.Popen(["xdg-open", video_path])
+    except Exception as e:
+        print(f"Не удалось открыть видео: {e}")
+        return False
+
+    # Создаем окно для подтверждения
+    window = tk.Tk()
+    window.withdraw()  # Скрыть основное окно
+
+    result = messagebox.askyesno("Подтверждение", "Хотите продолжить с этим видео?")
+
+    window.destroy()
+
+    return result
+
+
 def select_image(folder):
     root = Tk()
     root.title('Выберите изображение')
@@ -435,7 +466,7 @@ def upload_youtube(title, description):
     hashtags = [tag.strip() for hashtag in hashtags for tag in hashtag.split(',')]
 
     video.set_title(title_name)
-    #video.set_description("This is a description")
+    # video.set_description("This is a description")
     video.set_tags(hashtags)
     video.set_category("education")
     video.set_default_language("en-US")
@@ -456,30 +487,43 @@ def upload_youtube(title, description):
     video.like()
 
 
-VAR = 'computers'
+def main(VAR):
+    data_list = get_data_and_download_images()
+    with open('data_list.json', 'w') as file:
+        json.dump(data_list, file)
 
-# data_list = get_data_and_download_images()
-# with open('data_list.json', 'w') as file:
-#     json.dump(data_list, file)
-#
-# directories = ["background", "downloads"]
-#
-# for directory in directories:
-#     for subfolder in os.listdir(directory):
-#         full_path = os.path.join(directory, subfolder)
-#         if os.path.isdir(full_path):
-#             select_image(full_path)
-#
-# with open('data_list.json', 'r') as file:
-#     data_list = json.load(file)
-# prepare_video(data_list)
-#
+    directories = ["background", "downloads"]
 
-# time.sleep(5)
-# with open("hashtags.txt", "r") as file:
-#     content = file.read()
-#     print(content)
+    for directory in directories:
+        for subfolder in os.listdir(directory):
+            full_path = os.path.join(directory, subfolder)
+            if os.path.isdir(full_path):
+                select_image(full_path)
 
-# upload_tiktok(f'video/final_video_{VAR}.mp4', content)
-# upload_instagram(f'video/final_video_{VAR}.mp4', content)
-# upload_youtube(f'video/final_video_{VAR}.mp4', content)
+    with open('data_list.json', 'r') as file:
+        data_list = json.load(file)
+    prepare_video(data_list)
+
+    video_path = f'video/final_video_{VAR.replace(" ", "_")}.mp4'
+    time.sleep(5)
+    if show_video_and_ask(video_path):
+        with open("hashtags.txt", "r") as file:
+            content = file.read()
+            print(content)
+
+        upload_tiktok(video_path, content)
+        upload_instagram(video_path, content)
+        upload_youtube(video_path, content)
+    else:
+        print("Operation cancelled by the user.")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Script to generate and upload videos.")
+    parser.add_argument("VAR", nargs='+', help="Specify the variable for naming.")
+    args = parser.parse_args()
+
+    # Join the list of words to create a single string.
+    VAR = ' '.join(args.VAR)
+
+    main(VAR)
