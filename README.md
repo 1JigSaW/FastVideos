@@ -40,3 +40,22 @@ True to its name, FastVideos rapidly produces videos, enabling content creators 
 - Content Creators focusing on community building and branding
 - Luxury Goods Retailers seeking targeted advertising opportunities
 - Data Analysts and Trend Researchers studying the luxury market
+
+## Clone the Repository
+Clone the FastVideos repository to your local machine:
+
+git clone https://github.com/yourusername/FastVideos.git
+Command-Line Execution
+Navigate to the FastVideos directory and run the script using the command line:
+
+cd FastVideos
+python fastVideos.py --VAR "Cars"
+Replace "Cars" with other categories to generate different niche-focused content.
+
+## User Prompts
+
+After the script runs, a preview video will launch. Approve or reject the generated video through a dialog box.
+
+## Confirmation & Upload
+
+Upon confirmation, FastVideos will upload the content to the specified social media platforms.
